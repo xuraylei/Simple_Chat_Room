@@ -25,9 +25,11 @@ int main(int argc, char *argv[])
 
     fd_set read_fds;        //Read File Description set
 
+    char input_buffer[100]; //the buffer for user inpout
+
     //buffer for sending message payload
     char join_buffer[20];
-    char message_buffer[512];
+    char message_buffer[512];  // the buffer for SEND message
     char sock_buffer[1000];
 
     //buffer for receiving message
@@ -53,19 +55,20 @@ int main(int argc, char *argv[])
 
     if (connect(sockfd, &server_addr, sizeof(server_addr)){
         close(&sockfd);
-        error("Cannot connect to server! \n Exit ...");           exit (0);
+        error("Cannot connect to server! \n Exit ...");         
+        exit (0);
     }
 
-    //TODO: Client send JOIN msg to server
+    //Client send JOIN msg to server
     strcpy(join_buffer, username);
-    attr.type = ATTR_USERNAME;
+    attr.type = htons(ATTR_USERNAME);
     attr.payload = join_buffer;
-    attr.length = sizeof(attr);
+    attr.length = htons(sizeof(attr));
 
     msg.version = 3;
     msg.type = SBCP_JOIN;
     msg.payload = &attr;
-    msg.length = sizeof(msg);
+    msg.length = htons(sizeof(msg));
 
     memcpy(sock_buffer, msg, msg.length);
 
@@ -75,8 +78,12 @@ int main(int argc, char *argv[])
 
     }
 
+    FD_CLR(sockfd, &read_fds);
+    FD_CLR(sockfd, &read_fds);
+
     FD_SET(sockfd, &read_fds);   //add socket fd
     FD_SET(0, &read_fds);        //add stdin fd
+
 
 
     while (true){
@@ -85,9 +92,27 @@ int main(int argc, char *argv[])
             exit(0);
         }
 
-        //TODO: process user keyborad input
+        //process user keyborad input and send to server side
         if (FD_ISSET(0, &read_fds)){
             
+            //Client send SEND message to server
+            fgets(input_buffer, sizeof(input_buffer), stdin);
+
+            attr.type = htons(ATTR_MESSAGE);
+            attr.payload = input;
+            attr.length = htons(sizeof(attr));
+
+            msg.version = 3;
+            msg.type = SBCP_SEND;
+            msg.payload = &attr;
+            msg.length = htons(sizeof(msg));
+
+            memcpy(sock_buffer, msg, msg.length);
+
+            if (send(sockfd, sock_buffer, sizeof(sock_buffer)) == 01){
+                fprintf(stderr, "Cannot send out user message. Quit...");
+                exit(0);
+            }       
         }
 
         //process network socket input
@@ -100,7 +125,7 @@ int main(int argc, char *argv[])
         }
     }
 
-
+    close(sockfd);
     return 0;
-    }
+    
 }
