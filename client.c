@@ -23,10 +23,15 @@ int main(int argc, char *argv[])
     struct attr_sbcp attr;
     struct msg_sbcp msg;
 
+    fd_set read_fds;        //Read File Description set
+
     //buffer for sending message payload
     char join_buffer[20];
     char message_buffer[512];
     char sock_buffer[1000];
+
+    //buffer for receiving message
+    char rev_buffer[1000];
 
     if (argc < 4){
         fprintf(stderr, "usage %s username server_ip server_port", argv[0]);
@@ -69,6 +74,32 @@ int main(int argc, char *argv[])
         exit(0);
 
     }
+
+    FD_SET(sockfd, &read_fds);   //add socket fd
+    FD_SET(0, &read_fds);        //add stdin fd
+
+
+    while (true){
+        if (select(sockfd + 1， &read_fds, 0, 0, 0) < 0){
+            fprintf(stderr, "Cannot select file descriotions. ");
+            exit(0);
+        }
+
+        //TODO: process user keyborad input
+        if (FD_ISSET(0, &read_fds)){
+            
+        }
+
+        //process network socket input
+        if (FD_ISSET(fd_sock, &read_fds)){
+            if ((num = recv(fd_sock, recv_buffer, 1000, 0)) <=0){
+                fpfrintf(stderr, "Error in receving message from server.");
+            }
+            recv_buffer[num] = "\0";
+            printf("%s\n", recv_buffer);
+        }
+    }
+
 
     return 0;
     }

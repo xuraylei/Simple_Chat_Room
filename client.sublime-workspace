@@ -3,6 +3,18 @@
 	{
 		"selected_items":
 		[
+			[
+				"sco",
+				"sockfd"
+			],
+			[
+				"u",
+				"uint8_t"
+			],
+			[
+				"bu",
+				"join_buffer"
+			]
 		]
 	},
 	"buffers":
@@ -40,14 +52,16 @@
 	},
 	"file_history":
 	[
+		"/Users/ray/sourcecode/ecen602/Simple_Chat_Room/client.c",
+		"/Users/ray/sourcecode/ecen602/Simple_Chat_Room/SBCP.h"
 	],
 	"find":
 	{
-		"height": 0.0
+		"height": 23.0
 	},
 	"find_in_files":
 	{
-		"height": 0.0,
+		"height": 93.0,
 		"where_history":
 		[
 		]
@@ -81,11 +95,11 @@
 	],
 	"incremental_find":
 	{
-		"height": 0.0
+		"height": 23.0
 	},
 	"input":
 	{
-		"height": 0.0
+		"height": 31.0
 	},
 	"layout":
 	{
@@ -118,7 +132,7 @@
 	"project": "client.sublime-project",
 	"replace":
 	{
-		"height": 0.0
+		"height": 42.0
 	},
 	"save_all_on_build": true,
 	"select_file":
