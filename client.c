@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
                 exit(0);
             }       
         }
-
+        
         //process network socket input
         if (FD_ISSET(fd_sock, &read_fds)){
             if ((num = recv(fd_sock, recv_buffer, 1000, 0)) <=0){
