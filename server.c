@@ -21,7 +21,7 @@
 #include <sys/select.h>		// for select() system call only
 #include <sys/time.h>		// time() & clock_gettime()
 
-/*#include "sbcp.h"*/
+#include "sbcp.h"
 
 
 #define msg_size 80

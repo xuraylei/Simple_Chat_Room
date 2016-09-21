@@ -1,5 +1,4 @@
 //The client side program for SBCP based chat program
-a
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
