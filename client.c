@@ -7,7 +7,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
-
 #include "sbcp.h"
 
 
@@ -39,6 +38,8 @@ int main(int argc, char *argv[])
         exit(0);
     }
     
+    memset(&server_addr, '0', sizeof(server_addr)); 
+
     username = argv[1];
     server_ip = gethostbyname(argv[2]);
     server_port = atoi(argv[3]);
@@ -47,17 +48,21 @@ int main(int argc, char *argv[])
         exit(0);
     }
     server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = inet_addr(argv[2]);
     server_addr.sin_port = htons(server_port);
-    
+    memset(server_addr.sin_zero, '\0', sizeof server_addr.sin_zero);  
         
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
-    if (connect(sockfd, &server_addr, sizeof(server_addr))){
+    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1){
+        perror("Cannot connect to server! Exit ...");         
         close(sockfd);
-        error("Cannot connect to server! \n Exit ...");         
         exit (0);
     }
-
+    else{
+          fprintf(stdin, "connected to server %s successfully!", argv[1]);
+    }
+ 
     //Client send JOIN msg to server
     strcpy(join_buffer, username);
     attr.type = htons(ATTR_USERNAME);
@@ -70,21 +75,18 @@ int main(int argc, char *argv[])
     msg.length = htons(sizeof(attr.length) + 4);
 
     //memcpy(sock_buffer, msg, msg.length);
-
-    //if (send(sockfd, sock_buffer, sizeof(sock_buffer),0`) == -1){
-    if (write(sockfd, &msg, msg.length) <0){
-        fprintf(stderr, "Cannot send out JOIN message. Quit...");
+    if (write(sockfd, (char*)&msg, msg.length) < 0){
+        perror("Cannot send out JOIN message. Quit...");
         exit(0);
-
+    }
+    else{
+        printf("Send out Join Successfully!");
     }
 
     FD_CLR(sockfd, &read_fds);
     FD_CLR(sockfd, &read_fds);
-
     FD_SET(sockfd, &read_fds);   //add socket fd
     FD_SET(0, &read_fds);        //add stdin fd
-
-
 
     while (1){
         if (select(sockfd+1, &read_fds, 0, 0, 0) < 0) {
@@ -109,7 +111,7 @@ int main(int argc, char *argv[])
 
 
             if (write(sockfd, &msg, msg.length) < 0){
-                fprintf(stderr, "Cannot send out user message. Quit...");
+                perror("Cannot send out user message. Quit...");
                 exit(0);
             }       
         }
@@ -118,9 +120,9 @@ int main(int argc, char *argv[])
         int num = -1;
         if (FD_ISSET(sockfd, &read_fds)){
             if ((num = recv(sockfd, recv_buffer, 1000, 0)) <=0){
-                fprintf(stderr, "Error in receving message from server.");
+                perror("Error in receving message from server.");
             }
-            recv_buffer[num] = "\0";
+            recv_buffer[num] = '\0';
             printf("%s\n", recv_buffer);
         }
     }
