@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <sys/type.h>
-#include <sys/sock.h>
-#include <netinet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <netdb.h>
 
 #include "sbcp.h"
@@ -32,10 +32,10 @@ int main(int argc, char *argv[])
     char sock_buffer[1000];
 
     //buffer for receiving message
-    char rev_buffer[1000];
+    char recv_buffer[1000];
 
     if (argc < 4){
-        fprintf(stderr, "usage %s username server_ip server_port", argv[0]);
+        fprintf(stderr, "usage: %s username server_ip server_port\n", argv[0]);
         exit(0);
     }
     
@@ -52,8 +52,8 @@ int main(int argc, char *argv[])
         
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
-    if (connect(sockfd, &server_addr, sizeof(server_addr)){
-        close(&sockfd);
+    if (connect(sockfd, &server_addr, sizeof(server_addr))){
+        close(sockfd);
         error("Cannot connect to server! \n Exit ...");         
         exit (0);
     }
@@ -62,16 +62,17 @@ int main(int argc, char *argv[])
     strcpy(join_buffer, username);
     attr.type = htons(ATTR_USERNAME);
     attr.payload = join_buffer;
-    attr.length = htons(sizeof(attr));
+    attr.length = htons(sizeof(join_buffer) + 4);
 
     msg.version = 3;
     msg.type = SBCP_JOIN;
     msg.payload = &attr;
-    msg.length = htons(sizeof(msg));
+    msg.length = htons(sizeof(attr.length) + 4);
 
-    memcpy(sock_buffer, msg, msg.length);
+    //memcpy(sock_buffer, msg, msg.length);
 
-    if (send(sockfd, sock_buffer, sizeof(sock_buffer)) == -1){
+    //if (send(sockfd, sock_buffer, sizeof(sock_buffer),0`) == -1){
+    if (write(sockfd, &msg, msg.length) <0){
         fprintf(stderr, "Cannot send out JOIN message. Quit...");
         exit(0);
 
@@ -85,8 +86,8 @@ int main(int argc, char *argv[])
 
 
 
-    while (true){
-        if (select(sockfd + 1， &read_fds, 0, 0, 0) < 0){
+    while (1){
+        if (select(sockfd+1, &read_fds, 0, 0, 0) < 0) {
             fprintf(stderr, "Cannot select file descriotions. ");
             exit(0);
         }
@@ -98,26 +99,26 @@ int main(int argc, char *argv[])
             fgets(input_buffer, sizeof(input_buffer), stdin);
 
             attr.type = htons(ATTR_MESSAGE);
-            attr.payload = input;
-            attr.length = htons(sizeof(attr));
+            attr.payload = input_buffer;
+            attr.length = htons(sizeof(input_buffer) + 4);
 
             msg.version = 3;
             msg.type = SBCP_SEND;
             msg.payload = &attr;
-            msg.length = htons(sizeof(msg));
+            msg.length = htons(sizeof(attr.length) + 4);
 
-            memcpy(sock_buffer, msg, msg.length);
 
-            if (send(sockfd, sock_buffer, sizeof(sock_buffer)) == 01){
+            if (write(sockfd, &msg, msg.length) < 0){
                 fprintf(stderr, "Cannot send out user message. Quit...");
                 exit(0);
             }       
         }
         
         //process network socket input
-        if (FD_ISSET(fd_sock, &read_fds)){
-            if ((num = recv(fd_sock, recv_buffer, 1000, 0)) <=0){
-                fpfrintf(stderr, "Error in receving message from server.");
+        int num = -1;
+        if (FD_ISSET(sockfd, &read_fds)){
+            if ((num = recv(sockfd, recv_buffer, 1000, 0)) <=0){
+                fprintf(stderr, "Error in receving message from server.");
             }
             recv_buffer[num] = "\0";
             printf("%s\n", recv_buffer);
