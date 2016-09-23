@@ -88,7 +88,7 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
    
    int sockfd;
    int result;
- //  char hostname[msg_size];
+
    struct hostent *hostinfo;
    struct sockaddr_in addr;
     struct sockaddr_in client_addr;
@@ -145,7 +145,7 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
 
      /* Create a connection queue and initialize a file descriptor set */
 
-    //Listen for incoming connections
+    //Listen for #include "server.h"oming connections
   listen(server_sockfd, 5);
 
   if(listen(server_sockfd, 5) < 0)
@@ -156,7 +156,7 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
   FD_ZERO(&readfds);
   FD_ZERO(&activefds);
   FD_SET(server_sockfd, &activefds);
-  FD_SET(0, &activefds);  /* Add keyboard to file descriptor set */
+//  FD_SET(0, &activefds);  /* Add keyboard to file descriptor set */
 
   fd_max = server_sockfd;
 
@@ -169,9 +169,9 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
   {
   readfds = activefds;
         /* select API */
-  select(FD_SETSIZE, &readfds, NULL, NULL, NULL);
+  select( fd_max +1, &readfds, NULL, NULL, NULL);
 
-  for(i=0;i<FD_SETSIZE;i++)
+  for(i=0;i< fd_max + 1;i++)
   {
     if (FD_ISSET(i, &readfds)){
    /* if (0 == i)  
@@ -200,11 +200,15 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
        fflush(stdout);
 
        FD_SET(client_sockfd, &activefds);
-  
 
+       if (client_sockfd > fd_max){
+         fd_max = client_sockfd;
+       }
   }
   else {
-        read(i,input_buffer,sizeof(input_buffer));
+        if (recv(i,input_buffer,sizeof(input_buffer),0) <= 0){
+            break;
+        }
 
         struct msg_sbcp *msg = (struct msg_sbcp*) input_buffer;
 
@@ -281,8 +285,7 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
             }
             
             int len = strlen(send_buf);
-      //      printf("%s %d\n",send_buf,len);
-      //      fflush(stdout);
+       
             send_buf[len] = ':';
             send_buf[len+1] = ' ';
 
@@ -292,11 +295,15 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
             
       //     printf("receive message from client");
       //     fflush(stdout); 
-           for(j=0;j<num_clients;j++)
+
+           printf("%s %d\n",send_buf, len + attribute.length - 2);
+           fflush(stdout);
+           for(j=1;j<fd_max+1;j++)
           {
             /*dont write msg to same client*/
-            if (fd_array[j] != i && fd_array[j] != server_sockfd) {
-               forward(fd_array[j],send_buf, len + attribute.length - 2);
+            if (FD_ISSET(j, &activefds) && j != server_sockfd && j != i) {
+               forward(j,send_buf, len + attribute.length - 2);
+
                }
             }
           

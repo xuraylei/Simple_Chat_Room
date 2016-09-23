@@ -86,11 +86,14 @@ int main(int argc, char *argv[])
   //      fflush(stdout);
     }
 
-    FD_CLR(sockfd, &read_fds);
-    FD_SET(sockfd, &read_fds);   //add socket fd
-    FD_SET(0, &read_fds);        //add stdin fd
+    FD_ZERO(&read_fds);
+
 
     while (1){
+
+        FD_SET(sockfd, &read_fds);   //add socket fd
+        FD_SET(0, &read_fds);        //add stdin fd
+        
         if (select(sockfd+1, &read_fds, 0, 0, 0) < 0) {
             perror("Cannot select file descriotions. ");
             exit(0);
@@ -120,7 +123,7 @@ int main(int argc, char *argv[])
          //   printf("send out message with len %d", msg.length);
          //   fflush(stdout);
 
-            if (write(sockfd, &msg, msg.length) < 0){
+            if (send(sockfd, &msg, msg.length,0) < 0){
                 perror("Cannot send out user message. Quit...");
                 exit(0);
             }
@@ -149,7 +152,6 @@ int main(int argc, char *argv[])
              printf("%c", attribute.payload[j]);
             }
             printf("\n");
-
             fflush(stdout); 
         }
     }
