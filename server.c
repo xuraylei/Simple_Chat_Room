@@ -206,9 +206,13 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
        }
   }
   else {
+<<<<<<< HEAD
         if (recv(i,input_buffer,sizeof(input_buffer),0) <= 0){
             break;
         }
+=======
+        recv(i,input_buffer,sizeof(input_buffer),0);
+>>>>>>> c5a9c950484f005766c0d668a89bdfe043bd6103
 
         struct msg_sbcp *msg = (struct msg_sbcp*) input_buffer;
 
