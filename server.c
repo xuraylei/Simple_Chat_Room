@@ -206,13 +206,51 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
        }
   }
   else {
-<<<<<<< HEAD
-        if (recv(i,input_buffer,sizeof(input_buffer),0) <= 0){
+        int num = recv(i,input_buffer,sizeof(input_buffer),0);
+        if (num == 0){
+            char delname[100];
+            int cno = -1;
+            //find out who is leaving
+            for (j =0; j<num_clients; j++){
+              if (cno == -1 && fd_array[j] == i){
+                cno = j;
+                strcpy(delname,client_names[j]);
+              }
+              //cleanup
+              else if (cno != -1){
+                fd_array[j-1] = fd_array[j];
+                strcpy(client_names[j-1],client_names[j]);
+              }
+            }
+
+            FD_CLR(i,&activefds );
+            num_clients--;
+
+
+             char error_msg[] = "Client ";
+             strcat(error_msg, delname);
+             strcat(error_msg, "leave. Current Clients: ");
+
+              for (j=0;j<num_clients;j++){
+                 strcat(error_msg,client_names[j]);
+                 int len = strlen(error_msg);
+                 error_msg[len] = ' ';
+                 error_msg[len+1] = '\0';
+              }
+
+            for(j=1;j<fd_max+1;j++)
+           {
+            // tell others the client leave
+            if (FD_ISSET(j, &activefds) && j != server_sockfd && j != i) {
+               forward(j,error_msg, strlen(error_msg));
+
+               }
+            }
+
+
+
             break;
         }
-=======
-        recv(i,input_buffer,sizeof(input_buffer),0);
->>>>>>> c5a9c950484f005766c0d668a89bdfe043bd6103
 
         struct msg_sbcp *msg = (struct msg_sbcp*) input_buffer;
 
@@ -244,11 +282,29 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
               fd_array[num_clients] = i;
               strcpy(client_names[num_clients++], username);
 
+              char info_msg[] = "Client Join. Current Client: ";
+
+              for (j=0;j<num_clients;j++){
+                 strcat(info_msg,client_names[j]);
+                 int len = strlen(info_msg);
+                 info_msg[len] = ' ';
+                 info_msg[len+1] = '\0';
+              }
+             
+             for(j=1;j<fd_max+1;j++)
+             {
+            // tell others the client leave
+            if (FD_ISSET(j, &activefds) && j != server_sockfd) {
+               forward(j,info_msg, strlen(info_msg));
+
+               }
+            }
+
               //debug username
-              printf("The username is %s.\n",client_names[num_clients-1]);
+            //  printf("The username is %s.\n",client_names[num_clients-1]);
             }
             else{
-              printf("The name is used!");
+           //   printf("The name is used!");
 
               char error_msg[] = "The name is used! Close socket!";
               forward(i,error_msg, strlen(error_msg));
