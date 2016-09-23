@@ -61,7 +61,7 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
       msg.payload = attr;
       msg.length = attr.length + 4;
 
-      if(write(sockfd,&msg,msg.length) < 0)
+      if(send(sockfd,&msg,msg.length,0) < 0)
       {
         perror("Send message error: cannot write socket!\n");
         close(sockfd);
@@ -152,7 +152,8 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
   {
     printf("Error listening\n");
   }
-  
+
+  FD_ZERO(&readfds);
   FD_ZERO(&activefds);
   FD_SET(server_sockfd, &activefds);
   FD_SET(0, &activefds);  /* Add keyboard to file descriptor set */
@@ -166,11 +167,11 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
      /*  Now wait for clients and requests */
   while (1) 
   {
-    readfds = activefds;
+  readfds = activefds;
         /* select API */
-select(FD_SETSIZE, &readfds, NULL, NULL, NULL);
+  select(FD_SETSIZE, &readfds, NULL, NULL, NULL);
 
-for(i=0;i<FD_SETSIZE;i++)
+  for(i=0;i<FD_SETSIZE;i++)
   {
     if (FD_ISSET(i, &readfds)){
    /* if (0 == i)  
@@ -221,7 +222,6 @@ for(i=0;i<FD_SETSIZE;i++)
 
           
             for (j=0; j < attribute.length - 4; j++){
-              printf("%c", attribute.payload[j]);
               username[j] = attribute.payload[j];
               }
 
@@ -237,7 +237,7 @@ for(i=0;i<FD_SETSIZE;i++)
               strcpy(client_names[num_clients++], username);
 
               //debug username
-              printf("%s",client_names[num_clients-1]);
+              printf("The username is %s.\n",client_names[num_clients-1]);
             }
             else{
               printf("The name is used!");
@@ -245,7 +245,7 @@ for(i=0;i<FD_SETSIZE;i++)
               char error_msg[] = "The name is used! Close socket!";
               forward(i,error_msg, strlen(error_msg));
 
-               FD_SET(i, &activefds);
+               FD_CLR(i, &activefds);
                close(i);
 
             }
@@ -257,7 +257,7 @@ for(i=0;i<FD_SETSIZE;i++)
               char error_msg[] = "Too many clients! Close socket!";
               forward(i,error_msg, strlen(error_msg));
 
-               FD_SET(i, &activefds);
+               FD_CLR(i, &activefds);
                close(i);
          }
           }
@@ -269,41 +269,35 @@ for(i=0;i<FD_SETSIZE;i++)
   //           printf("the len: %d\n", attribute.length);
              fflush(stdout); 
 
-            /*
-            for (j=0; j < attribute.length -4; j++){
-              printf("%c", attribute.payload[i]);
-                fflush(stdout); 
-            }
-            */
-          printf("receive message from client");
-          fflush(stdout); 
-           for(j=1;j<FD_SETSIZE;j++)
-          {
-
-            /*dont write msg to same client*/
-            if (FD_ISSET(j, &activefds) && j != i && j != server_sockfd) {
-              char send_buf[100];
+             char send_buf[100];
               int m;
               //attach username to msg
               for (m =0; m < num_clients; m++){
-              if (fd_array[m] == j){
-                printf("Found user name ");
-              fflush(stdout);
+              if (fd_array[m] == i){
+          //      printf("Found user name ");
+          //    fflush(stdout);
                 strcpy(send_buf, client_names[m]);
               }
             }
             
             int len = strlen(send_buf);
-            printf("%s %d\n",send_buf,len);
-            fflush(stdout);
+      //      printf("%s %d\n",send_buf,len);
+      //      fflush(stdout);
             send_buf[len] = ':';
             send_buf[len+1] = ' ';
 
             for (m=0; m< attribute.length - 4; m++){
                 send_buf[m+len+2] = attribute.payload[m];
             }
-             forward(j,send_buf, len + attribute.length - 2);
-            }
+            
+      //     printf("receive message from client");
+      //     fflush(stdout); 
+           for(j=0;j<num_clients;j++)
+          {
+            /*dont write msg to same client*/
+            if (fd_array[j] != i && fd_array[j] != server_sockfd) {
+               forward(fd_array[j],send_buf, len + attribute.length - 2);
+               }
             }
           
         }

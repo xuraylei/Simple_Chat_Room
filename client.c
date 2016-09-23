@@ -141,8 +141,9 @@ int main(int argc, char *argv[])
             struct msg_sbcp *msg = (struct msg_sbcp*) recv_buffer;
             struct attr_sbcp attribute =  msg->payload;
 
-            printf("receive length %d", attribute.length);
-            fflush(stdout);
+            //debug
+            //printf("receive length %d", attribute.length);
+            //fflush(stdout);
 
             for (j=0; j < attribute.length -4; j++){
              printf("%c", attribute.payload[j]);
