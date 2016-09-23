@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
          //   printf("send out message with len %d", msg.length);
          //   fflush(stdout);
 
-            if (write(sockfd, &msg, msg.length) < 0){
+            if (send(sockfd, &msg, msg.length,0) < 0){
                 perror("Cannot send out user message. Quit...");
                 exit(0);
             }
@@ -149,7 +149,6 @@ int main(int argc, char *argv[])
              printf("%c", attribute.payload[j]);
             }
             printf("\n");
-
             fflush(stdout); 
         }
     }

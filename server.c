@@ -204,7 +204,7 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
 
   }
   else {
-        read(i,input_buffer,sizeof(input_buffer));
+        recv(i,input_buffer,sizeof(input_buffer),0);
 
         struct msg_sbcp *msg = (struct msg_sbcp*) input_buffer;
 
