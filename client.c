@@ -12,7 +12,7 @@
 
 int main(int argc, char *argv[])
 {
-    int sockfd, server_port;
+    int sockfd, server_port,i,j;
     char* username;
     struct hostent *server_ip;
     struct sockaddr_in server_addr;
@@ -64,15 +64,16 @@ int main(int argc, char *argv[])
     }
  
     //Client send JOIN msg to server
-    strcpy(join_buffer, username);
-    attr.type = htons(ATTR_USERNAME);
-    attr.payload = join_buffer;
-    attr.length = htons(sizeof(join_buffer) + 4);
+
+    attr.type = ATTR_USERNAME;
+    attr.length = strlen(username) + 4;
+    for (i=0;i<strlen(username);i++)
+         attr.payload[i]=username[i];
 
     msg.version = 3;
     msg.type = SBCP_JOIN;
-    msg.payload = &attr;
-    msg.length = htons(sizeof(attr.length) + 4);
+    msg.payload = attr;
+    msg.length = attr.length + 4;
 
     //memcpy(sock_buffer, msg, msg.length);
     if (write(sockfd, (char*)&msg, msg.length) < 0){
@@ -80,50 +81,66 @@ int main(int argc, char *argv[])
         exit(0);
     }
     else{
-        printf("Send out Join Successfully!");
+        printf("Send out Join Successfully!\n");
+        fflush(stdout);
     }
 
-    FD_CLR(sockfd, &read_fds);
     FD_CLR(sockfd, &read_fds);
     FD_SET(sockfd, &read_fds);   //add socket fd
     FD_SET(0, &read_fds);        //add stdin fd
 
     while (1){
         if (select(sockfd+1, &read_fds, 0, 0, 0) < 0) {
-            fprintf(stderr, "Cannot select file descriotions. ");
+            perror("Cannot select file descriotions. ");
             exit(0);
         }
-
         //process user keyborad input and send to server side
         if (FD_ISSET(0, &read_fds)){
             
             //Client send SEND message to server
             fgets(input_buffer, sizeof(input_buffer), stdin);
 
-            attr.type = htons(ATTR_MESSAGE);
-            attr.payload = input_buffer;
-            attr.length = htons(sizeof(input_buffer) + 4);
+            int size_buf=strlen(input_buffer)-1;
+            if (input_buffer[size_buf]=='\n')
+              input_buffer[size_buf]='\0';
+
+            attr.type = ATTR_MESSAGE;
+            attr.length = size_buf + 4;
+
+            for (i=0;i<size_buf;i++)
+                attr.payload[i]=input_buffer[i];
 
             msg.version = 3;
             msg.type = SBCP_SEND;
-            msg.payload = &attr;
-            msg.length = htons(sizeof(attr.length) + 4);
+            msg.payload = attr;
+            msg.length = attr.length + 4;
 
+            printf("send out message with len %d", msg.length);
+            fflush(stdout);
 
             if (write(sockfd, &msg, msg.length) < 0){
                 perror("Cannot send out user message. Quit...");
                 exit(0);
-            }       
+            }
+             else{
+                 printf("Send out Message Successfully!");
+                 fflush(stdout);
+        }
         }
         
         //process network socket input
         int num = -1;
         if (FD_ISSET(sockfd, &read_fds)){
-            if ((num = recv(sockfd, recv_buffer, 1000, 0)) <=0){
+            if ((num = recv(sockfd, recv_buffer, 1000, 0)) <= 0){
                 perror("Error in receving message from server.");
             }
-            recv_buffer[num] = '\0';
-            printf("%s\n", recv_buffer);
+            struct msg_sbcp *msg = (struct msg_sbcp*) recv_buffer;
+            struct attr_sbcp attribute =  msg->payload;
+            for (j=0; j < attribute.length -4; j++){
+             printf("%c", attribute.payload[j]);
+            }
+
+            fflush(stdout); 
         }
     }
 

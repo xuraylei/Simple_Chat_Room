@@ -15,7 +15,7 @@
 struct attr_sbcp{
     uint16_t type;
     uint16_t length;
-    char* payload;
+    char payload[128];
 };
 
 //The SBCP message
@@ -24,7 +24,7 @@ struct msg_sbcp{
 	uint8_t version;
 	uint8_t type;
     uint16_t length;
-    struct attr_sbcp* payload;
+    struct attr_sbcp payload;
 };
 
 //pack the version and type into the header of SBCP message

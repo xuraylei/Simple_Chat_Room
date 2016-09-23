@@ -48,7 +48,7 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
       int n;
 
       if (buf[size_buf]=='\n')
-        buf[size_buf]=='\0';
+        buf[size_buf] = '\0';
 
       attr.type = ATTR_MESSAGE;
       attr.length = size_buf + 4;
@@ -58,29 +58,30 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
 
       msg.version = 3;
       msg.type = SBCP_SEND;
-      msg.payload = &attr;
+      msg.payload = attr;
       msg.length = attr.length + 4;
 
       if(write(sockfd,&msg,msg.length) < 0)
       {
         perror("Send message error: cannot write socket!\n");
+        close(sockfd);
         exit(0);
       }
-      printf("Sucessfully send out a message!\n");
+      printf("Sucessfully send out a message to %d!\n", sockfd);
     }
 
 
     int main(int argc, char *argv[]) 
     {
      int max_clients;
-     int i=0;
+     int i=0, j=0;
  //  int port;
      int num_clients = 0;
      int server_sockfd, client_sockfd;
      struct sockaddr_in server_addr;
      int fd;
      char fd_array[max_clients];
-     fd_set readfds;
+     fd_set readfds,activefds;
 
    char input_buffer[max_msg_size + 1];     //socket input buffer
    char kb_buffer[100]; //keyboard input buffer
@@ -90,10 +91,11 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
  //  char hostname[msg_size];
    struct hostent *hostinfo;
    struct sockaddr_in addr;
-//   char alias[msg_size];
+    struct sockaddr_in client_addr;
+    size_t size;
    int clientid;
 
-   int max_fd;
+   int fd_max;
 
    int server_port;
    
@@ -151,101 +153,133 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
     printf("Error listening\n");
   }
   
-  FD_ZERO(&readfds);
-  FD_SET(server_sockfd, &readfds);
-  FD_SET(0, &readfds);  /* Add keyboard to file descriptor set */
+  FD_ZERO(&activefds);
+  FD_SET(server_sockfd, &activefds);
+  FD_SET(0, &activefds);  /* Add keyboard to file descriptor set */
 
+  fd_max = server_sockfd;
+
+  // name for users
+  char client_names[max_clients][100];
 
      /*  Now wait for clients and requests */
   while (1) 
   {
-
-    max_fd = server_sockfd;
-
-    for(i=0;i<num_clients;i++)
-    {
-        /*dont write msg to same client*/
-      if (fd_array[i] > max_fd)
-        max_fd =  fd_array[i];
-
-    }
+    readfds = activefds;
         /* select API */
-    select(max_fd + 1, &readfds, NULL, NULL, NULL);
+select(FD_SETSIZE, &readfds, NULL, NULL, NULL);
 
+for(i=0;i<FD_SETSIZE;i++)
+  {
+    if (FD_ISSET(i, &readfds)){
+   /* if (0 == i)  
+    {          
+      fgets(kb_buffer, sizeof(kb_buffer), stdin);
+    printf("%s\n",kb_buffer);
 
-    /* Accept a new connection request */
-    if (FD_ISSET(server_sockfd, &readfds)) 
-    { 
-     printf("receive from client");
-
-     client_sockfd = accept(server_sockfd, NULL, NULL);
-
-     printf("client_sockfd: %d\n",client_sockfd);
-
-
-      if (msg->type == SBCP_JOIN){
-      fd_array[num_clients++]=client_sockfd;
-
-        //TODO: print out the name of user or inform other users
-      struct attr_sbcp* pattr = msg->payload;
-
-        /*Client ID*/
-      printf("Client %d joined\n",num_clients);
-      char join_msg[100];
-
-      fflush(stdout);
-    } else if (msg->type == SBCP_SEND){//forward message to other clients
-       char* output = input_buffer + 8;
-
-       for(i=0;i<num_clients;i++)
-       {
-         /*dont write msg to same client*/
-        if (fd_array[i] != fd)  
-          forward(fd_array[i],output,strlen(output));
-      }
-
-    }
-
-     if (num_clients < max_clients) 
-     {
-      FD_SET(client_sockfd, &readfds);
-
-      result = read(client_sockfd, input_buffer, max_msg_size);
-
-      if(result==-1){
-       perror("Cannot read from client socket!");
-       error(0);
-     }else //too many clients
-     {
+    if (strcmp(kb_buffer, "quit")==0) {
       char error_msg[100];
 
-      sprintf(error_msg, "Sorry, too many clients.  Try again later.\n");
-      error_msg[44] = '\0';
+      sprintf(error_msg, "Server is quiting.\n");
+      error_msg[19] = '\0';
 
-      forward(client_sockfd, error_msg, strlen(error_msg));
-      close(client_sockfd);
+      for (j = 0; j < num_clients ; j++)
+      forward(fd_array[j], error_msg, strlen(error_msg));
+      }
     }
+   else*/ if (i == server_sockfd)    /* Accept a new connection request */
+    { 
+     printf("receive from client\n");
 
-    struct msg_sbcp *msg = (struct msg_sbcp*) input_buffer;
+     size = sizeof(client_addr);
+     client_sockfd = accept(server_sockfd,  (struct sockaddr *)&client_addr,(socklen_t*)&size);
 
-   
+       printf("client_sockfd: %d\n", client_sockfd);
+       fflush(stdout);
+
+       FD_SET(client_sockfd, &activefds);
+  
 
   }
-  }else if (fd == 0)  
-  {  /* Process keyboard activity */                 
-  fgets(kb_buffer, sizeof(kb_buffer), stdin);
-  printf("%s\n",kb_buffer);
+  else {
+        read(i,input_buffer,sizeof(input_buffer));
 
-  if (strcmp(kb_buffer, "quit")==0) {
-    char error_msg[100];
+        struct msg_sbcp *msg = (struct msg_sbcp*) input_buffer;
 
-    sprintf(error_msg, "Server is quiting.\n");
-    error_msg[19] = '\0';
+        if (msg->type == SBCP_JOIN){
 
-    for (i = 0; i < num_clients ; i++)
-     forward(fd_array[i], error_msg, strlen(error_msg));
+          if (num_clients < max_clients) 
+         {  
+             char username[100];
+             int occupied = 0;
+
+            struct attr_sbcp attribute =  msg->payload;
+
+            printf("the len: %d\n", attribute.length);
+            username[attribute.length - 4] = '\0';
+
+          
+            for (j=0; j < attribute.length - 4; j++){
+              printf("%c", attribute.payload[j]);
+              username[j] = attribute.payload[j];
+              }
+
+            //if the username is occupied
+            for (j=0; j<num_clients; j++){
+              if (strcmp(username,  client_names[j]) == 0){
+                  occupied = 1;
+              }
+            }
+           
+            if (occupied == 0){
+              strcpy(client_names[num_clients++], username);
+            }
+            else{
+              printf("The name is used!");
+
+              char error_msg[] = "The name is used! Close socket!";
+              forward(i,error_msg, strlen(error_msg));
+
+               FD_SET(i, &activefds);
+               close(i);
+
+            }
+            
+
+            fflush(stdout); 
+        }
+         else{
+          //TODO: too many clients and inform client
+         }
+          }
+    
+
+         if (msg->type == SBCP_SEND){//forward message to other clients
+            
+             struct attr_sbcp attribute =  msg->payload;
+  //           printf("the len: %d\n", attribute.length);
+             fflush(stdout); 
+
+            /*
+            for (j=0; j < attribute.length -4; j++){
+              printf("%c", attribute.payload[i]);
+                fflush(stdout); 
+            }
+            */
+          printf("receive message from client");
+          fflush(stdout); 
+           for(j=1;j<FD_SETSIZE;j++)
+          {
+            /*dont write msg to same client*/
+            if (FD_ISSET(j, &activefds) && j != i && j != server_sockfd) {
+             forward(j,attribute.payload, attribute.length - 4);
+            }
+          }
+        }
+   }
   }
-}
+   }
+
 
               /*Process Client specific activity*/
   /*            else if(fd) 
