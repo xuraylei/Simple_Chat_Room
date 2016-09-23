@@ -80,7 +80,7 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
      int server_sockfd, client_sockfd;
      struct sockaddr_in server_addr;
      int fd;
-     char fd_array[max_clients];
+  
      fd_set readfds,activefds;
 
    char input_buffer[max_msg_size + 1];     //socket input buffer
@@ -161,6 +161,7 @@ void exitClient(int fd, fd_set *readfds, char fd_array[], int *num_clients)
 
   // name for users
   char client_names[max_clients][100];
+    char fd_array[max_clients];
 
      /*  Now wait for clients and requests */
   while (1) 
@@ -231,8 +232,12 @@ for(i=0;i<FD_SETSIZE;i++)
               }
             }
            
-            if (occupied == 0){
+            if (occupied == 0){//if the username is not occupied
+              fd_array[num_clients] = i;
               strcpy(client_names[num_clients++], username);
+
+              //debug username
+              printf("%s",client_names[num_clients-1]);
             }
             else{
               printf("The name is used!");
@@ -244,12 +249,16 @@ for(i=0;i<FD_SETSIZE;i++)
                close(i);
 
             }
-            
-
             fflush(stdout); 
         }
          else{
-          //TODO: too many clients and inform client
+            printf("Too many clients!");
+
+              char error_msg[] = "Too many clients! Close socket!";
+              forward(i,error_msg, strlen(error_msg));
+
+               FD_SET(i, &activefds);
+               close(i);
          }
           }
     
@@ -270,11 +279,33 @@ for(i=0;i<FD_SETSIZE;i++)
           fflush(stdout); 
            for(j=1;j<FD_SETSIZE;j++)
           {
+
             /*dont write msg to same client*/
             if (FD_ISSET(j, &activefds) && j != i && j != server_sockfd) {
-             forward(j,attribute.payload, attribute.length - 4);
+              char send_buf[100];
+              int m;
+              //attach username to msg
+              for (m =0; m < num_clients; m++){
+              if (fd_array[m] == j){
+                printf("Found user name ");
+              fflush(stdout);
+                strcpy(send_buf, client_names[m]);
+              }
             }
-          }
+            
+            int len = strlen(send_buf);
+            printf("%s %d\n",send_buf,len);
+            fflush(stdout);
+            send_buf[len] = ':';
+            send_buf[len+1] = ' ';
+
+            for (m=0; m< attribute.length - 4; m++){
+                send_buf[m+len+2] = attribute.payload[m];
+            }
+             forward(j,send_buf, len + attribute.length - 2);
+            }
+            }
+          
         }
    }
   }

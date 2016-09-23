@@ -81,8 +81,9 @@ int main(int argc, char *argv[])
         exit(0);
     }
     else{
-        printf("Send out Join Successfully!\n");
-        fflush(stdout);
+        //debug
+ //       printf("Send out Join Successfully!\n");
+  //      fflush(stdout);
     }
 
     FD_CLR(sockfd, &read_fds);
@@ -115,16 +116,18 @@ int main(int argc, char *argv[])
             msg.payload = attr;
             msg.length = attr.length + 4;
 
-            printf("send out message with len %d", msg.length);
-            fflush(stdout);
+        //debug
+         //   printf("send out message with len %d", msg.length);
+         //   fflush(stdout);
 
             if (write(sockfd, &msg, msg.length) < 0){
                 perror("Cannot send out user message. Quit...");
                 exit(0);
             }
              else{
-                 printf("Send out Message Successfully!");
-                 fflush(stdout);
+                //debug
+           //      printf("Send out Message Successfully!");
+            //     fflush(stdout);
         }
         }
         
@@ -133,12 +136,18 @@ int main(int argc, char *argv[])
         if (FD_ISSET(sockfd, &read_fds)){
             if ((num = recv(sockfd, recv_buffer, 1000, 0)) <= 0){
                 perror("Error in receving message from server.");
+                exit(0);
             }
             struct msg_sbcp *msg = (struct msg_sbcp*) recv_buffer;
             struct attr_sbcp attribute =  msg->payload;
+
+            printf("receive length %d", attribute.length);
+            fflush(stdout);
+
             for (j=0; j < attribute.length -4; j++){
              printf("%c", attribute.payload[j]);
             }
+            printf("\n");
 
             fflush(stdout); 
         }
